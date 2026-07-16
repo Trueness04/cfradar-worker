@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CFRadar — Clean Cloudflare IP Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="scanlines"></div>
+
+<div class="top-shell">
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 40 40" width="34" height="34">
+        <circle cx="20" cy="20" r="18" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="0.5"/>
+        <circle cx="20" cy="20" r="11" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="20" cy="20" r="2.4" fill="var(--green)"/>
+        <line id="brandSweep" x1="20" y1="20" x2="20" y2="2" stroke="var(--green)" stroke-width="1.6" opacity="0.85"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-title">CF<span class="accent">Radar</span></div>
+      <div class="brand-sub">Clean Cloudflare IP &amp; domain scanner — built for the Iranian internet</div>
+    </div>
+  </div>
+  <div class="status-group">
+    <div class="status-pill" id="netPill">
+      <span class="dot" id="netDot"></span>
+      <span id="netText">Checking connection…</span>
+    </div>
+    <div class="status-pill" id="statusPill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+  </div>
+</header>
+
+<nav class="icon-rail" id="iconRail">
+  <button class="tab rail-btn active" data-mode="cf" data-label="Cloudflare Range">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><path d="M12 2.2v2.3M21.8 12h-2.3M12 21.8v-2.3M2.2 12h2.3"/></svg>
+    <span class="rail-tip">Cloudflare Range</span>
+  </button>
+  <button class="tab rail-btn" data-mode="domains" data-label="Domain List">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.7 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.7-4-9s1.4-6.5 4-9z"/></svg>
+    <span class="rail-tip">Domain List</span>
+  </button>
+  <button class="tab rail-btn" data-mode="v2ray" data-label="V2Ray Configs">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="16.5" r="3.5"/><path d="M10 14l9.5-9.5"/><path d="M15.5 8l2.3 2.3"/><path d="M13 10.5l2.3 2.3"/></svg>
+    <span class="rail-tip">V2Ray Configs</span>
+  </button>
+  <button class="tab rail-btn" data-mode="proxy" data-label="Proxy List (SOCKS/HTTP)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3.5 20.5 3.5 20.5 8"/><line x1="3.5" y1="20.5" x2="20.5" y2="3.5"/><polyline points="20.5 15.5 20.5 20.5 15.5 20.5"/><line x1="14.5" y1="14.5" x2="20.5" y2="20.5"/><line x1="3.5" y1="3.5" x2="8.5" y2="8.5"/></svg>
+    <span class="rail-tip">Proxy List (SOCKS/HTTP)</span>
+  </button>
+  <button class="tab rail-btn" data-mode="proxyscrape" data-label="Scrape &amp; Scan Proxies">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 17.5a4 4 0 01-1-7.9 5.3 5.3 0 0110.3-1.8A4.7 4.7 0 0117 17.5H6.5z"/><path d="M12 10.5v6.3M9.7 14.3L12 16.8l2.3-2.5"/></svg>
+    <span class="rail-tip">Scrape &amp; Scan Proxies</span>
+  </button>
+</nav>
+</div>
+
+<main class="layout">
+
+  <!-- ===================== Control Panel ===================== -->
+  <section class="panel controls">
+    <div class="tab-body" id="tabCf">
+      <label class="field">
+        <span>Number of samples from ranges</span>
+        <input type="number" id="cfCount" value="500" min="1" max="20000" />
+      </label>
+      <label class="field">
+        <span>SNI test hostname (real Cloudflare domain used to verify fronting via TLS)</span>
+        <input type="text" id="cfSni" value="speed.cloudflare.com" />
+      </label>
+    </div>
+
+    <div class="tab-body hidden" id="tabDomains">
+      <label class="field">
+        <span>Domain list source (URL or server file path)</span>
+        <input type="text" id="domainsSource" value="https://raw.githubusercontent.com/hossein-mohseni/CF-Web/refs/heads/main/domains.json" />
+      </label>
+      <label class="field checkbox">
+        <input type="checkbox" id="resolveDns" />
+        <span>Do a fresh DNS lookup instead of using the IP in the JSON</span>
+      </label>
+    </div>
+
+    <div class="tab-body hidden" id="tabV2ray">
+      <label class="field">
+        <span>Subscription URL or pasted configs (vmess:// / vless:// / trojan:// / ss://, one per line)</span>
+        <textarea id="v2raySource" rows="6" placeholder="https://example.com/sub  — or paste configs directly, one per line"></textarea>
+      </label>
+      <small class="field-hint">Every config gets a real TCP handshake (+ a TLS probe when the config uses TLS). Ranked by latency — the 3 fastest are surfaced separately below the table when the scan finishes, ready to copy straight into your client.</small>
+    </div>
+
+    <div class="tab-body hidden" id="tabProxy">
+      <label class="field">
+        <span>Proxy list — one per line: <code>ip:port</code>, <code>http://ip:port</code> or <code>socks5://ip:port</code></span>
+        <textarea id="proxyList" rows="6" placeholder="1.2.3.4:8080&#10;socks5://5.6.7.8:1080"></textarea>
+      </label>
+      <small class="field-hint">HTTP proxies are tested with a real CONNECT tunnel; SOCKS5 proxies with a real SOCKS5 handshake — both against a live Cloudflare endpoint.</small>
+    </div>
+
+    <div class="tab-body hidden" id="tabProxyscrape">
+      <label class="field">
+        <span>How many proxies to pull per protocol (HTTP + SOCKS5) from public scrape sources</span>
+        <input type="number" id="scrapeLimit" value="150" min="10" max="2000" />
+      </label>
+      <small class="field-hint">Pulls fresh HTTP + SOCKS5 proxy lists from 14 public mirrors (7 per protocol), dedupes, then runs the exact same real handshake test as the manual Proxy List tab — fully automatic, no list to paste.</small>
+      <div class="scrape-log" id="scrapeLog"></div>
+    </div>
+
+    <div class="grid2">
+      <label class="field">
+        <span>TCP Port</span>
+        <select id="port">
+          <option value="443" selected>443 (HTTPS)</option>
+          <option value="2053">2053</option>
+          <option value="2083">2083</option>
+          <option value="2087">2087</option>
+          <option value="2096">2096</option>
+          <option value="80">80 (HTTP)</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Number of passes</span>
+        <input type="number" id="passes" value="3" min="1" max="10" />
+      </label>
+      <label class="field">
+        <span>Timeout per attempt (ms)</span>
+        <input type="number" id="timeout" value="1200" min="100" max="10000" step="100" />
+        <small class="field-hint" id="timeoutHint"></small>
+      </label>
+      <label class="field">
+        <span>Parallel workers</span>
+        <input type="number" id="workers" value="250" min="1" max="2000" />
+      </label>
+    </div>
+
+    <div class="grid2">
+      <label class="field">
+        <span>Target ping range — min (ms)</span>
+        <input type="number" id="targetMin" placeholder="e.g. 40" min="0" max="5000" />
+      </label>
+      <label class="field">
+        <span>Target ping range — max (ms)</span>
+        <input type="number" id="targetMax" placeholder="e.g. 50" min="0" max="5000" />
+      </label>
+    </div>
+    <small class="field-hint">Leave both empty to just want "fast" in general. If set, only IPs whose ping actually falls in this band count as Clean — and results are ranked by how close they are to the middle of it.</small>
+
+    <label class="field checkbox">
+      <input type="checkbox" id="useIcmp" />
+      <span>Also measure real ICMP ping (the OS <code>ping</code> command) — independent of the TCP check, and what most ping tools report. Lower "Parallel workers" if you enable this; it spawns one OS process per IP.</span>
+    </label>
+
+    <label class="field checkbox">
+      <input type="checkbox" id="fragTest" />
+      <span>Test SNI-fragmentation DPI bypass — for IPs that fail the normal TLS check, sends a hand-built ClientHello split across two packets right inside the hostname bytes, to reveal whether that IP is only blocked by single-packet SNI inspection (not actually down). Adds one extra probe per IP, so it's slower.</span>
+    </label>
+
+    <button class="btn-primary" id="startBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 3l16 9-16 9V3z" fill="currentColor"/></svg>
+      Start Scan
+    </button>
+    <button class="btn-ghost hidden" id="stopBtn">Stop</button>
+
+    <div class="legend">
+      <span class="legend-item"><i class="sw clean"></i>Clean</span>
+      <span class="legend-item"><i class="sw warn"></i>Unstable</span>
+      <span class="legend-item"><i class="sw dead"></i>Dead</span>
+    </div>
+  </section>
+
+  <!-- ===================== Radar ===================== -->
+  <section class="panel radar-panel">
+    <canvas id="radar" width="520" height="520"></canvas>
+    <div class="radar-stats">
+      <div class="stat">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">Checked</div>
+      </div>
+      <div class="stat clean">
+        <div class="stat-num" id="statClean">0</div>
+        <div class="stat-label">Clean</div>
+      </div>
+      <div class="stat dead">
+        <div class="stat-num" id="statDead">0</div>
+        <div class="stat-label">Dead</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statAvg">–</div>
+        <div class="stat-label">Best latency (ms)</div>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">Waiting to start…</div>
+    </div>
+  </section>
+
+  <!-- ===================== Results Table ===================== -->
+  <section class="panel results">
+    <div class="results-head">
+      <h2>Live Results <span class="muted" id="resultsCount">(0)</span></h2>
+      <div class="export-group">
+        <button class="btn-export" data-fmt="cleanips">⬇ Clean IPs (.txt)</button>
+        <button class="btn-export" data-fmt="csv">⬇ CSV</button>
+        <button class="btn-export" data-fmt="json">⬇ JSON</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th data-key="rank">RANK</th>
+            <th data-key="kind">Type</th>
+            <th data-key="ip">IP / Host</th>
+            <th data-key="domain">Domain / Name</th>
+            <th data-key="avgMs">LATENCY (ms)</th>
+            <th data-key="icmpMs">ICMP (ms)</th>
+            <th data-key="jitterMs">Jitter</th>
+            <th data-key="lossPct">Loss%</th>
+            <th data-key="cfVerified">Verified</th>
+            <th data-key="dpi">DPI Bypass</th>
+            <th data-key="throughputKbps">Speed (KB/s)</th>
+            <th data-key="status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody">
+          <tr class="empty-row"><td colspan="12">No scan has been run yet — start from the panel on the right.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="top3-box hidden" id="top3Box">
+      <h3>🏆 Top 3 fastest configs</h3>
+      <div id="top3List"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">CFRadar · No package install required · Node.js built-ins only</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

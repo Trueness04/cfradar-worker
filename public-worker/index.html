@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CFRadar — Clean Cloudflare IP Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="scanlines"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 40 40" width="34" height="34">
+        <circle cx="20" cy="20" r="18" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="0.5"/>
+        <circle cx="20" cy="20" r="11" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="20" cy="20" r="2.4" fill="var(--green)"/>
+        <line id="brandSweep" x1="20" y1="20" x2="20" y2="2" stroke="var(--green)" stroke-width="1.6" opacity="0.85"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-title">CF<span class="accent">Radar</span> <span class="version-badge">v2.0</span></div>
+      <div class="brand-sub">Clean Cloudflare IP &amp; domain scanner — built for the Iranian internet</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-pill" id="statusPill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+  </div>
+</header>
+
+<!-- Main nav tabs -->
+<nav class="main-nav">
+  <button class="main-tab active" data-panel="scan">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/></svg>
+    Scan
+  </button>
+  <button class="main-tab" data-panel="results">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2"/></svg>
+    Results <span class="nav-badge" id="navResultsBadge"></span>
+  </button>
+  <button class="main-tab" data-panel="v2ray">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2"/></svg>
+    V2Ray Links <span class="nav-badge green" id="navV2rayBadge"></span>
+  </button>
+  <button class="main-tab" data-panel="geo">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" stroke="currentColor" stroke-width="2"/></svg>
+    Geo &amp; ASN
+  </button>
+</nav>
+
+<main class="layout">
+
+  <!-- ===================== SCAN PANEL ===================== -->
+  <div class="main-panel active" id="panelScan">
+    <div class="scan-layout">
+
+      <!-- Controls -->
+      <section class="panel controls">
+        <div class="section-title">Scan Configuration</div>
+
+        <div class="tabs">
+          <button class="tab active" data-mode="cf">Cloudflare Ranges</button>
+          <button class="tab" data-mode="domains">Domain List</button>
+        </div>
+
+        <div class="tab-body" id="tabCf">
+          <label class="field">
+            <span>Number of IPs to sample</span>
+            <input type="number" id="cfCount" value="500" min="1" max="20000" />
+          </label>
+          <label class="field">
+            <span>SNI hostname (Cloudflare domain for TLS fronting verification)</span>
+            <input type="text" id="cfSni" value="speed.cloudflare.com" />
+          </label>
+        </div>
+
+        <div class="tab-body hidden" id="tabDomains">
+          <label class="field">
+            <span>Domain list source (URL or file path)</span>
+            <input type="text" id="domainsSource" value="https://raw.githubusercontent.com/hossein-mohseni/CF-Web/refs/heads/main/domains.json" />
+          </label>
+          <label class="field checkbox">
+            <input type="checkbox" id="resolveDns" />
+            <span>Force fresh DNS lookup (ignore IPs in JSON)</span>
+          </label>
+        </div>
+
+        <div class="grid2">
+          <label class="field">
+            <span>TCP Port</span>
+            <select id="port">
+              <option value="443" selected>443 (HTTPS)</option>
+              <option value="2053">2053</option>
+              <option value="2083">2083</option>
+              <option value="2087">2087</option>
+              <option value="2096">2096</option>
+              <option value="80">80 (HTTP)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Passes per IP</span>
+            <input type="number" id="passes" value="3" min="1" max="10" />
+          </label>
+          <label class="field">
+            <span>Timeout (ms)</span>
+            <input type="number" id="timeout" value="1200" min="100" max="10000" step="100" />
+            <small class="field-hint" id="timeoutHint"></small>
+          </label>
+          <label class="field">
+            <span>Parallel workers</span>
+            <input type="number" id="workers" value="250" min="1" max="2000" />
+          </label>
+        </div>
+
+        <div class="grid2">
+          <label class="field">
+            <span>Target latency min (ms)</span>
+            <input type="number" id="targetMin" placeholder="e.g. 40" min="0" max="5000" />
+          </label>
+          <label class="field">
+            <span>Target latency max (ms)</span>
+            <input type="number" id="targetMax" placeholder="e.g. 120" min="0" max="5000" />
+          </label>
+        </div>
+        <small class="field-hint">Leave empty for general "fast" mode. If set, only IPs in this latency band count as Clean.</small>
+
+        <div class="section-title" style="margin-top:16px;">V2Ray Link Builder</div>
+        <div class="grid2">
+          <label class="field">
+            <span>UUID (for vmess/vless)</span>
+            <input type="text" id="v2uuid" placeholder="auto-generate" />
+          </label>
+          <label class="field">
+            <span>Protocol</span>
+            <select id="v2proto">
+              <option value="vless">VLESS</option>
+              <option value="vmess">VMess</option>
+              <option value="trojan">Trojan</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Path</span>
+            <input type="text" id="v2path" value="/" />
+          </label>
+          <label class="field">
+            <span>Network</span>
+            <select id="v2net">
+              <option value="ws">WebSocket</option>
+              <option value="grpc">gRPC</option>
+              <option value="h2">HTTP/2</option>
+              <option value="tcp">TCP</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span>Host/SNI for V2Ray config</span>
+          <input type="text" id="v2sni" value="speed.cloudflare.com" />
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="v2tls" checked />
+          <span>TLS enabled</span>
+        </label>
+
+        <label class="field checkbox" style="margin-top:8px;">
+          <input type="checkbox" id="useIcmp" />
+          <span>Real ICMP ping (spawns OS <code>ping</code> — lower workers if enabled)</span>
+        </label>
+
+        <div class="btn-row">
+          <button class="btn-primary" id="startBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 3l16 9-16 9V3z" fill="currentColor"/></svg>
+            Start Scan
+          </button>
+          <button class="btn-ghost hidden" id="stopBtn">⏹ Stop</button>
+        </div>
+
+        <div class="legend">
+          <span class="legend-item"><i class="sw clean"></i>Clean</span>
+          <span class="legend-item"><i class="sw warn"></i>Unstable</span>
+          <span class="legend-item"><i class="sw dead"></i>Dead</span>
+        </div>
+      </section>
+
+      <!-- Radar -->
+      <section class="panel radar-panel">
+        <canvas id="radar" width="520" height="520"></canvas>
+        <div class="radar-stats">
+          <div class="stat">
+            <div class="stat-num" id="statTotal">0</div>
+            <div class="stat-label">Checked</div>
+          </div>
+          <div class="stat clean">
+            <div class="stat-num" id="statClean">0</div>
+            <div class="stat-label">Clean</div>
+          </div>
+          <div class="stat dead">
+            <div class="stat-num" id="statDead">0</div>
+            <div class="stat-label">Dead</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="statAvg">–</div>
+            <div class="stat-label">Best ms</div>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-text" id="progressText">Waiting to start…</div>
+        </div>
+        <!-- Live feed -->
+        <div class="live-feed" id="liveFeed">
+          <div class="live-feed-title">Live feed</div>
+          <div id="liveFeedBody"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ===================== RESULTS PANEL ===================== -->
+  <div class="main-panel" id="panelResults">
+    <section class="panel results">
+      <div class="results-head">
+        <h2>Scan Results <span class="muted" id="resultsCount">(0)</span></h2>
+        <div class="export-group">
+          <button class="btn-export" data-fmt="cleanips">⬇ Clean IPs (.txt)</button>
+          <button class="btn-export" data-fmt="v2ray">⬇ V2Ray Links</button>
+          <button class="btn-export" data-fmt="csv">⬇ CSV</button>
+          <button class="btn-export" data-fmt="json">⬇ JSON</button>
+          <button class="btn-export" data-fmt="clash">⬇ Clash Proxies</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <label class="field checkbox inline">
+          <input type="checkbox" id="filterClean" checked />
+          <span>Clean only</span>
+        </label>
+        <label class="field inline">
+          <input type="text" id="filterIp" placeholder="Filter by IP…" style="width:160px" />
+        </label>
+        <label class="field inline">
+          <input type="number" id="filterMaxMs" placeholder="Max ms" style="width:100px" />
+        </label>
+        <button class="btn-export" id="clearFilter">✕ Clear</button>
+      </div>
+      <div class="table-wrap">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th data-key="rank">#</th>
+              <th data-key="ip">IP</th>
+              <th data-key="domain">Domain</th>
+              <th data-key="avgMs">Avg ms</th>
+              <th data-key="medianMs">Median ms</th>
+              <th data-key="icmpMs">ICMP ms</th>
+              <th data-key="jitterMs">Jitter</th>
+              <th data-key="lossPct">Loss%</th>
+              <th data-key="cfVerified">CF TLS</th>
+              <th data-key="cfPop">PoP</th>
+              <th data-key="throughputKbps">Speed KB/s</th>
+              <th data-key="status">Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr class="empty-row"><td colspan="13">No scan yet — go to the Scan tab.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== V2RAY PANEL ===================== -->
+  <div class="main-panel" id="panelV2ray">
+    <section class="panel">
+      <div class="results-head">
+        <h2>V2Ray &amp; Xray Links <span class="muted" id="v2Count">(0)</span></h2>
+        <div class="export-group">
+          <button class="btn-export" id="copyAllV2">⎘ Copy All</button>
+          <button class="btn-export" id="downloadV2">⬇ Download .txt</button>
+          <button class="btn-export" id="downloadClash">⬇ Clash Config</button>
+          <button class="btn-export" id="downloadSingbox">⬇ sing-box Config</button>
+        </div>
+      </div>
+      <div class="v2ray-info">
+        <div class="v2ray-info-box">
+          <b>How to use:</b> Each link below is a complete proxy config for a clean Cloudflare IP.
+          Import directly into v2rayNG, v2rayN, Nekoray, Hiddify, Streisand, or any Xray client.
+          The links encode your V2Ray settings from the Scan tab.
+        </div>
+      </div>
+      <div id="v2LinkList" class="v2-link-list">
+        <div class="empty-row-plain">Run a scan first. Clean IPs will appear here as ready-to-use V2Ray links.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== GEO PANEL ===================== -->
+  <div class="main-panel" id="panelGeo">
+    <section class="panel">
+      <div class="results-head">
+        <h2>Geo &amp; ASN Lookup</h2>
+      </div>
+      <div class="geo-lookup-row">
+        <input type="text" id="geoIpInput" placeholder="Enter an IP address…" class="geo-input" />
+        <button class="btn-primary" id="geoLookupBtn" style="width:auto;padding:10px 20px;">Lookup</button>
+      </div>
+      <div id="geoResult" class="geo-result hidden"></div>
+
+      <div class="section-title" style="margin-top:28px;">Clean IP Geo Map</div>
+      <div class="geo-summary-info">After a scan, clean IPs are grouped by country and datacenter (PoP) here.</div>
+      <div id="geoSummary" class="geo-summary">
+        <div class="empty-row-plain">Run a scan to see geo distribution of clean IPs.</div>
+      </div>
+    </section>
+  </div>
+
+</main>
+
+<footer class="footer">CFRadar v2.0 · Cloudflare Workers ready · No npm install required</footer>
+
+<!-- IP detail modal -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal" id="modalBox">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
