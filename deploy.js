@@ -185,8 +185,8 @@ async function main() {
   console.log('');
   console.log('✅  Deploy complete!');
   console.log('');
-  console.log(`   🔗  Your CFRadar URL:`);
-  console.log(`       ${workerUrl}`);
+  console.log('   🔗  Worker deployed successfully.');
+  console.log('   ℹ️   For the endpoint URL, check the Cloudflare dashboard or workers.dev settings.');
   console.log('');
   console.log('   ℹ️   If the URL doesn\'t work immediately, wait ~30 seconds for propagation.');
   console.log('   ℹ️   To use a custom domain, add a route in the Cloudflare dashboard.');
