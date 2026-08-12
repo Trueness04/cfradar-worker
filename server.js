@@ -230,7 +230,8 @@ function tlsCloudflareProbe(ip, sniHost, port, timeoutMs) {
         host: ip,
         port,
         servername: sniHost,
-        rejectUnauthorized: false, // we're testing fronting, the cert won't match the IP
+        rejectUnauthorized: true,
+        checkServerIdentity: (_host, cert) => tls.checkServerIdentity(sniHost, cert),
       });
       socket.setTimeout(timeoutMs);
     } catch (_) {
