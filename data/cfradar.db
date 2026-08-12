@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "created": 1784322924526,
+  "tables": {
+    "cloudflare_ips": [],
+    "domains": [],
+    "proxies": [],
+    "v2ray_configs": [],
+    "scan_history": [],
+    "geoip_cache": {}
+  },
+  "indexes": {
+    "cloudflare_ips_by_ip": [],
+    "domains_by_name": [],
+    "proxies_by_address": [],
+    "v2ray_by_name": []
+  }
+}

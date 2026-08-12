@@ -128,8 +128,16 @@ function icmpPing(ip, count, timeoutMs) {
 // inspection, not actually unreachable — a genuinely different, actionable
 // signal most scanners don't surface at all.
 // ---------------------------------------------------------------------------
-function u16(n) { const b = Buffer.alloc(2); b.writeUInt16BE(n, 0); return b; }
-function u24(n) { const b = Buffer.alloc(3); b.writeUIntBE(n, 0, 3); return b; }
+// Pre-allocate reusable buffers for TLS handshake to avoid GC pressure
+const TLS_VERSION_BUF = Buffer.from([0x03, 0x03]);
+const TLS_SESSION_EMPTY = Buffer.from([0x00]);
+const TLS_COMPRESSION_NULL = Buffer.from([0x01, 0x00]);
+// Pre-allocated TLS cipher suite buffers (reused across all handshakes)
+const CIPHER_BUFS = [Buffer.from([0xc0,0x2f]),Buffer.from([0xc0,0x30]),Buffer.from([0xc0,0x2b]),Buffer.from([0xc0,0x2c]),Buffer.from([0x00,0x9c]),Buffer.from([0x00,0x2f]),Buffer.from([0x00,0x35])];
+const CIPHER_SECTION_LEN = CIPHER_BUFS.reduce((n,b)=>n+b.length,0);
+
+function u16(n) { const b = Buffer.allocUnsafe(2); b.writeUInt16BE(n, 0); return b; }
+function u24(n) { const b = Buffer.allocUnsafe(3); b.writeUIntBE(n, 0, 3); return b; }
 
 function buildTls12ClientHello(sniHost) {
   const hostBuf = Buffer.from(sniHost, 'utf8');
@@ -138,10 +146,10 @@ function buildTls12ClientHello(sniHost) {
   const sniList = Buffer.concat([u16(sniEntry.length), sniEntry]);
   const sniExt = Buffer.concat([u16(0x0000), u16(sniList.length), sniList]);
 
-  const ecPointsBody = Buffer.from([0x01, 0x00]); // 1 format: uncompressed
+  const ecPointsBody = Buffer.from([0x01, 0x00]);
   const ecPointsExt = Buffer.concat([u16(0x000b), u16(ecPointsBody.length), ecPointsBody]);
 
-  const groups = Buffer.concat([u16(0x001d), u16(0x0017), u16(0x0018)]); // x25519, secp256r1, secp384r1
+  const groups = Buffer.concat([u16(0x001d), u16(0x0017), u16(0x0018)]);
   const groupsBody = Buffer.concat([u16(groups.length), groups]);
   const groupsExt = Buffer.concat([u16(0x000a), u16(groupsBody.length), groupsBody]);
 
@@ -152,18 +160,14 @@ function buildTls12ClientHello(sniHost) {
   const extensions = Buffer.concat([sniExt, ecPointsExt, groupsExt, sigAlgosExt]);
   const extensionsSection = Buffer.concat([u16(extensions.length), extensions]);
 
-  const ciphers = Buffer.concat([
-    u16(0xc02f), u16(0xc030), u16(0xc02b), u16(0xc02c), u16(0x009c), u16(0x002f), u16(0x0035),
-  ]);
-  const cipherSection = Buffer.concat([u16(ciphers.length), ciphers]);
-  const compressionSection = Buffer.from([0x01, 0x00]); // 1 method: null
+  const cipherSection = Buffer.concat([u16(CIPHER_SECTION_LEN), ...CIPHER_BUFS]);
 
   const body = Buffer.concat([
-    Buffer.from([0x03, 0x03]),   // client_version: TLS 1.2
-    crypto.randomBytes(32),      // random
-    Buffer.from([0x00]),         // session_id: empty
+    TLS_VERSION_BUF,
+    crypto.randomBytes(32),
+    TLS_SESSION_EMPTY,
     cipherSection,
-    compressionSection,
+    TLS_COMPRESSION_NULL,
     extensionsSection,
   ]);
   const handshakeMsg = Buffer.concat([Buffer.from([0x01]), u24(body.length), body]);
@@ -346,15 +350,17 @@ async function scanTarget(target, ip, port, timeoutMs, passes, sniHost, opts) {
 
   const latencies = [];
   let successes = 0;
+  let sumLatency = 0;
   for (let i = 0; i < passes; i++) {
     const ms = await tcpProbeOnce(ip, port, timeoutMs);
     if (ms !== null) {
       latencies.push(ms);
+      sumLatency += ms;
       successes++;
     }
   }
-  const sortedLat = [...latencies].sort((a, b) => a - b);
-  const avg = latencies.length ? latencies.reduce((a, b) => a + b, 0) / latencies.length : Infinity;
+  const sortedLat = latencies.slice().sort((a, b) => a - b);
+  const avg = latencies.length ? sumLatency / latencies.length : Infinity;
   // Median is more robust than mean against the occasional spike Iran's
   // network throws in, so it's what we actually rank/score on.
   const median = sortedLat.length
