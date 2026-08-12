@@ -185,8 +185,12 @@ async function main() {
   console.log('');
   console.log('✅  Deploy complete!');
   console.log('');
+  const safeWorkerUrl = workerUrl.replace(
+    /^(https:\/\/[^.]+\.)[^.]+(\.workers\.dev)$/,
+    '$1***$2'
+  );
   console.log(`   🔗  Your CFRadar URL:`);
-  console.log(`       ${workerUrl}`);
+  console.log(`       ${safeWorkerUrl}`);
   console.log('');
   console.log('   ℹ️   If the URL doesn\'t work immediately, wait ~30 seconds for propagation.');
   console.log('   ℹ️   To use a custom domain, add a route in the Cloudflare dashboard.');
