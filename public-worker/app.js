@@ -600,7 +600,15 @@
       }).join('\n');
   }
   function toYamlValue(v, indent) {
-    if (typeof v === 'string') return `"${v.replace(/"/g, '\\"')}"`;
+    if (typeof v === 'string') {
+      const escaped = v
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
+      return `"${escaped}"`;
+    }
     if (typeof v === 'boolean' || typeof v === 'number') return String(v);
     if (typeof v === 'object' && v !== null) return '\n' + toYaml(v, indent + 1);
     return String(v);
