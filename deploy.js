@@ -70,6 +70,12 @@ function cfRequest(method, endpoint, body, contentType) {
   });
 }
 
+function maskSensitive(value) {
+  if (!value) return '(not set)';
+  if (value.length <= 6) return '***';
+  return `${value.slice(0, 4)}***${value.slice(-2)}`;
+}
+
 // Multipart form upload (required for Workers script upload)
 function uploadWorker(scriptContent) {
   return new Promise((resolve, reject) => {
@@ -127,7 +133,7 @@ async function main() {
   console.log('');
   console.log('🚀  CFRadar — Cloudflare Workers Deploy');
   console.log(`    Worker name : ${WORKER_NAME}`);
-  console.log(`    Account ID  : ${ACCOUNT_ID}`);
+  console.log(`    Account ID  : ${maskSensitive(ACCOUNT_ID)}`);
   console.log('');
 
   // Step 1: verify token
