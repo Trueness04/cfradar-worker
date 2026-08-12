@@ -477,26 +477,43 @@
     const cleanIps = results.filter((r) => r.clean);
     const v2List = document.getElementById('v2LinkList');
     document.getElementById('v2Count').textContent = `(${cleanIps.length})`;
+    v2List.replaceChildren();
     if (cleanIps.length === 0) {
-      v2List.innerHTML = '<div class="empty-row-plain">Run a scan first. Clean IPs will appear here as ready-to-use V2Ray links.</div>';
+      const empty = document.createElement('div');
+      empty.className = 'empty-row-plain';
+      empty.textContent = 'Run a scan first. Clean IPs will appear here as ready-to-use V2Ray links.';
+      v2List.appendChild(empty);
       return;
     }
-    v2List.innerHTML = cleanIps.map((r, i) => {
+    cleanIps.forEach((r) => {
       const link = buildV2Link(r.ip, cfg, r.domain, r.medianMs || '?');
-      const pop = r.cfPop ? `<span class="pop-tag">${r.cfPop}</span>` : '';
-      return `<div class="v2-link-item">
-        <div class="v2-link-header">
-          <div class="v2-link-meta">
-            <b>${r.ip}</b>${r.domain ? ' · ' + r.domain : ''}
-            ${pop}
-            · <span style="color:var(--green)">${r.medianMs ?? '?'}ms</span>
-            · ${cfg.proto.toUpperCase()} / ${cfg.net} / port ${cfg.port}
-          </div>
-          <button class="v2-link-copy-btn" data-link="${encodeURIComponent(link)}">⎘ Copy</button>
-        </div>
-        <div class="v2-link-str" data-link="${encodeURIComponent(link)}">${link}</div>
-      </div>`;
-    }).join('');
+      const item = document.createElement('div');
+      item.className = 'v2-link-item';
+
+      const header = document.createElement('div');
+      header.className = 'v2-link-header';
+
+      const meta = document.createElement('div');
+      meta.className = 'v2-link-meta';
+      meta.textContent = `${r.ip}${r.domain ? ' · ' + r.domain : ''}${r.cfPop ? ' · ' + r.cfPop : ''} · ${r.medianMs ?? '?'}ms · ${cfg.proto.toUpperCase()} / ${cfg.net} / port ${cfg.port}`;
+
+      const btn = document.createElement('button');
+      btn.className = 'v2-link-copy-btn';
+      btn.dataset.link = encodeURIComponent(link);
+      btn.textContent = '⎘ Copy';
+
+      header.appendChild(meta);
+      header.appendChild(btn);
+
+      const str = document.createElement('div');
+      str.className = 'v2-link-str';
+      str.dataset.link = encodeURIComponent(link);
+      str.textContent = link;
+
+      item.appendChild(header);
+      item.appendChild(str);
+      v2List.appendChild(item);
+    });
   }
 
   document.getElementById('v2LinkList').addEventListener('click', (e) => {
