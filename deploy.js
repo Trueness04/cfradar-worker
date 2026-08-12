@@ -133,7 +133,7 @@ async function main() {
   console.log('');
   console.log('🚀  CFRadar — Cloudflare Workers Deploy');
   console.log(`    Worker name : ${WORKER_NAME}`);
-  console.log(`    Account ID  : ${maskSensitive(ACCOUNT_ID)}`);
+  console.log('    Account ID  : (set)');
   console.log('');
 
   // Step 1: verify token
