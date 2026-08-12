@@ -407,9 +407,11 @@
       const ms = btn.dataset.ms;
       const cfg = v2Config();
       const link = buildV2Link(ip, cfg, domain, ms);
+      const safeIp = escapeHtml(ip);
+      const safeLink = escapeHtml(link);
       showModal(`
-        <div class="section-title">V2Ray Link — ${ip}</div>
-        <div class="v2-link-str" id="singleLinkStr">${link}</div>
+        <div class="section-title">V2Ray Link — ${safeIp}</div>
+        <div class="v2-link-str" id="singleLinkStr">${safeLink}</div>
         <div style="margin-top:12px;display:flex;gap:8px;">
           <button class="v2-link-copy-btn" id="singleCopyBtn">⎘ Copy Link</button>
         </div>
@@ -833,6 +835,15 @@
   // ============================================================
   // Utilities
   // ============================================================
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function copyText(text) {
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
