@@ -650,8 +650,19 @@
     }
   }
 
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function geoField(label, value) {
-    return `<div class="geo-field"><div class="geo-field-label">${label}</div><div class="geo-field-value">${value || '—'}</div></div>`;
+    const safeLabel = escapeHtml(label);
+    const safeValue = value == null || value === '' ? '—' : escapeHtml(value);
+    return `<div class="geo-field"><div class="geo-field-label">${safeLabel}</div><div class="geo-field-value">${safeValue}</div></div>`;
   }
 
   function renderGeoSummary() {
