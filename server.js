@@ -281,7 +281,7 @@ function throughputProbe(ip, sniHost, port, timeoutMs) {
     const finish = (kbps) => { if (!settled) { settled = true; resolve(kbps); } };
     let socket;
     try {
-      socket = tls.connect({ host: ip, port, servername: sniHost, rejectUnauthorized: false });
+      socket = tls.connect({ host: ip, port, servername: sniHost, rejectUnauthorized: true });
       socket.setTimeout(timeoutMs);
     } catch (_) { finish(null); return; }
 
